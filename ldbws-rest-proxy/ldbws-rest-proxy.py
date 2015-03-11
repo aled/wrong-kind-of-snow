@@ -21,6 +21,7 @@ def contents_of(path):
     with open(path, 'r') as f:
         return f.read().strip()
 
+
 access_token = contents_of(access_token_path)
 
 
@@ -29,80 +30,117 @@ def not_found(error):
     return make_response(jsonify({'error': 'Internal error'}), 500)
 
 
-def extract_fields(source, primitive_fields=[], object_fields=[]):
+def string(x):
+    return x
+
+
+def extract_fields(source, *data):
     r = {}
-
-    for field in primitive_fields:
-        if field in source and source[field] is not None:
-            r[field] = source[field]
-
-    for o in object_fields:
-        parser = o['parser']
-        for field in o['fields']:
-            if field in source:
-                r[field] = parser(source[field])
+    for o in data:
+        field = o[0]
+        parser = o[1]
+        if field in source:
+            r[field] = parser(source[field])
     return r
 
 
-def parse_service_location(x):
-    return extract_fields(x, ['futureChangeTo', 'via', 'crs', 'locationName', 'assoclsCancelled'])
+def service_location(x):
+    return extract_fields(x,
+                          ('futureChangeTo', string),
+                          ('via', string),
+                          ('crs', string),
+                          ('locationName', string),
+                          ('assoclsCancelled', string))
 
 
-def parse_array_of_service_location(x):
-    return [parse_service_location(i) for i in x.location]
+def service_locations(x):
+    return [service_location(i) for i in x.location]
 
 
-def parse_array_of_adhoc_alerts(x):
+def adhoc_alerts(x):
     return [i for i in x.adhocAlertText]
 
 
-def parse_service_item(x):
-    return extract_fields(
-        x,
-        ['sta', 'eta', 'std', 'etd', 'platform', 'operator', 'operatorCode', 'isCircularRoute', 'serviceID'],
-        [{'parser': parse_array_of_service_location, 'fields': ['origin', 'destination']},
-         {'parser': parse_array_of_adhoc_alerts, 'fields': ['adhocAlerts']}])
+def service_item(x):
+    return extract_fields(x,
+                          ('sta', string),
+                          ('eta', string),
+                          ('std', string),
+                          ('etd', string),
+                          ('platform', string),
+                          ('operator', string),
+                          ('operatorCode', string),
+                          ('isCircularRoute', string),
+                          ('serviceID', string),
+                          ('origin', service_locations),
+                          ('destination', service_locations),
+                          ('adhocAlerts', adhoc_alerts))
 
 
-def parse_array_of_service_item(x):
-    return [parse_service_item(i) for i in x.service]
+def service_items(x):
+    return [service_item(i) for i in x.service]
 
 
-def parse_array_of_nrcc_messages(x):
+def nrcc_messages(x):
     return [i for i in x.message]
 
 
-def parse_station_board(x):
-    return extract_fields(
-        x,
-        ['generatedAt', 'locationName', 'crs', 'filterLocationName', 'filtercrs',
-         'filterType', 'platformAvailable', 'areServicesAvailable'],
-        [{'parser': parse_array_of_service_item, 'fields': ['trainServices', 'busServices', 'ferryServices']},
-         {'parser': parse_array_of_nrcc_messages, 'fields': ['nrccMessages']}])
+def station_board(x):
+    return extract_fields(x,
+                          ('generatedAt', string),
+                          ('locationName', string),
+                          ('crs', string),
+                          ('filterLocationName', string),
+                          ('filtercrs', string),
+                          ('filterType', string),
+                          ('platformAvailable', string),
+                          ('areServicesAvailable', string),
+                          ('trainServices', service_items),
+                          ('busServices', service_items),
+                          ('ferryServices', service_items),
+                          ('nrccMessages', nrcc_messages))
 
 
-def parse_calling_points(x):
-    return extract_fields(
-        x,
-        ['locationName', 'crs', 'st', 'et', 'at'],
-        [{'parser': parse_array_of_adhoc_alerts, 'fields': ['adhocAlerts']}])
+def calling_points(x):
+    return extract_fields(x,
+                          ('locationName', string),
+                          ('crs', string),
+                          ('st', string),
+                          ('et', string),
+                          ('at', string),
+                          ('adhocAlerts', adhoc_alerts))
 
 
-def parse_array_of_calling_points(x):
-    return [parse_calling_points(i) for i in x.callingPoint]
+def calling_points_list(x):
+    return [calling_points(i) for i in x.callingPoint]
 
 
-def parse_array_of_array_of_calling_points(x):
-    return [parse_array_of_calling_points(i) for i in x.callingPointList]
+def calling_points_list_list(x):
+    return [calling_points_list(i) for i in x.callingPointList]
 
 
-def parse_service_details(x):
-    return extract_fields(
-        x,
-        ['generatedAt', 'serviceType', 'locationName', 'crs', 'operator', 'operatorCode', 'isCancelled',
-         'disruptionReason', 'overdueMessage', 'platform', 'sta', 'eta', 'ata', 'std', 'etd', 'atd'],
-        [{'parser': parse_array_of_adhoc_alerts, 'fields': ['adhocAlerts']},
-         {'parser': parse_array_of_array_of_calling_points, 'fields': ['previousCallingPoints', 'subsequentCallingPoints']}])
+def service_details(x):
+    return extract_fields(x,
+                          ('generatedAt', string),
+                          ('serviceType', string),
+                          ('locationName', string),
+                          ('crs', string),
+                          ('operator', string),
+                          ('operatorCode', string),
+                          ('isCancelled', string),
+                          ('disruptionReason', string),
+                          ('overdueMessage', string),
+                          ('platform', string),
+                          ('sta', string),
+                          ('eta', string),
+                          ('ata', string),
+                          ('std', string),
+                          ('etd', string),
+                          ('atd', string),
+                          ('adhocAlerts', adhoc_alerts),
+                          ('previousCallingPoints', calling_points_list_list),
+                          ('subsequentCallingPoints', calling_points_list_list))
+
 
 def get_service():
     client = Client('https://lite.realtime.nationalrail.co.uk/OpenLDBWS/wsdl.aspx?ver=2014-02-20')
@@ -121,7 +159,7 @@ def get_service():
 def get_departure_board_from(from_crs):
     try:
         soap_response = get_service().GetDepartureBoard(numRows=50, crs=from_crs)
-        resp = parse_station_board(soap_response)
+        resp = station_board(soap_response)
         return jsonify(resp)
     except Exception as e:
         logging.error(e.message)
@@ -132,7 +170,7 @@ def get_departure_board_from(from_crs):
 def get_departure_board_from_to(from_crs, to_crs):
     try:
         soap_response = get_service().GetDepartureBoard(numRows=50, crs=from_crs, filterCrs=to_crs, filterType='to')
-        resp = parse_station_board(soap_response)
+        resp = station_board(soap_response)
         return jsonify(resp)
     except Exception as e:
         logging.error(e.message)
@@ -143,11 +181,12 @@ def get_departure_board_from_to(from_crs, to_crs):
 def get_service_details(service_id):
     try:
         soap_response = get_service().GetServiceDetails(serviceID=service_id)
-        resp = parse_service_details(soap_response)
+        resp = service_details(soap_response)
         return jsonify(resp)
     except Exception as e:
         logging.error(e.message)
         abort(500)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
