@@ -45,17 +45,23 @@ def extract_fields(source, primitive_fields=[], object_fields=[]):
 
 
 def parse_service_location(x):
-    return extract_fields(source=x, primitive_fields=['futureChangeTo', 'via', 'crs', 'locationName'])
+    return extract_fields(x, ['futureChangeTo', 'via', 'crs', 'locationName', 'assoclsCancelled'])
 
 
 def parse_array_of_service_location(x):
     return [parse_service_location(i) for i in x.location]
 
 
+def parse_array_of_adhoc_alerts(x):
+    return [i for i in x.adhocAlertText]
+
+
 def parse_service_item(x):
-    return extract_fields(source=x,
-                          primitive_fields=['std', 'etd', 'operator', 'operatorCode', 'serviceID', 'platform'],
-                          object_fields=[{'parser': parse_array_of_service_location, 'fields': ['origin', 'destination']}])
+    return extract_fields(
+        x,
+        ['sta', 'eta', 'std', 'etd', 'platform', 'operator', 'operatorCode', 'isCircularRoute', 'serviceID'],
+        [{'parser': parse_array_of_service_location, 'fields': ['origin', 'destination']},
+         {'parser': parse_array_of_adhoc_alerts, 'fields': ['adhocAlerts']}])
 
 
 def parse_array_of_service_item(x):
@@ -67,10 +73,36 @@ def parse_array_of_nrcc_messages(x):
 
 
 def parse_station_board(x):
-    return extract_fields(source=x,
-                          primitive_fields=['generatedAt', 'locationName', 'crs', 'filterLocationName', 'filtercrs', 'filterType', 'platformAvailable', 'areServicesAvailable'],
-                          object_fields=[{'parser': parse_array_of_service_item, 'fields': ['trainServices', 'busServices', 'ferryServices']},
-                                         {'parser': parse_array_of_nrcc_messages, 'fields': ['nrccMessages']}])
+    return extract_fields(
+        x,
+        ['generatedAt', 'locationName', 'crs', 'filterLocationName', 'filtercrs',
+         'filterType', 'platformAvailable', 'areServicesAvailable'],
+        [{'parser': parse_array_of_service_item, 'fields': ['trainServices', 'busServices', 'ferryServices']},
+         {'parser': parse_array_of_nrcc_messages, 'fields': ['nrccMessages']}])
+
+
+def parse_calling_points(x):
+    return extract_fields(
+        x,
+        ['locationName', 'crs', 'st', 'et', 'at'],
+        [{'parser': parse_array_of_adhoc_alerts, 'fields': ['adhocAlerts']}])
+
+
+def parse_array_of_calling_points(x):
+    return [parse_calling_points(i) for i in x.callingPoint]
+
+
+def parse_array_of_array_of_calling_points(x):
+    return [parse_array_of_calling_points(i) for i in x.callingPointList]
+
+
+def parse_service_details(x):
+    return extract_fields(
+        x,
+        ['generatedAt', 'serviceType', 'locationName', 'crs', 'operator', 'operatorCode', 'isCancelled',
+         'disruptionReason', 'overdueMessage', 'platform', 'sta', 'eta', 'ata', 'std', 'etd', 'atd'],
+        [{'parser': parse_array_of_adhoc_alerts, 'fields': ['adhocAlerts']},
+         {'parser': parse_array_of_array_of_calling_points, 'fields': ['previousCallingPoints', 'subsequentCallingPoints']}])
 
 def get_service():
     client = Client('https://lite.realtime.nationalrail.co.uk/OpenLDBWS/wsdl.aspx?ver=2014-02-20')
@@ -109,8 +141,13 @@ def get_departure_board_from_to(from_crs, to_crs):
 
 @app.route('/ldbws-rest-proxy/v0.1/service-details/<string:service_id>', methods=['GET'])
 def get_service_details(service_id):
-    logging.info("")
-
+    try:
+        soap_response = get_service().GetServiceDetails(serviceID=service_id)
+        resp = parse_service_details(soap_response)
+        return jsonify(resp)
+    except Exception as e:
+        logging.error(e.message)
+        abort(500)
 
 if __name__ == '__main__':
     app.run(debug=True)
