@@ -177,7 +177,7 @@ def get_departure_board_from_to(from_crs, to_crs):
         abort(500)
 
 
-@app.route('/ldbws-rest-proxy/v0.1/service-details/<string:service_id>', methods=['GET'])
+@app.route('/ldbws-rest-proxy/v0.1/service-details/<path:service_id>', methods=['GET'])
 def get_service_details(service_id):
     try:
         soap_response = get_service().GetServiceDetails(serviceID=service_id)
