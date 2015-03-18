@@ -5,6 +5,7 @@
 
 from suds.client import Client
 from suds.sax.element import Element
+from os import environ
 from os.path import expanduser, join
 from flask import Flask, jsonify, make_response, abort
 import logging
@@ -21,8 +22,9 @@ def contents_of(path):
     with open(path, 'r') as f:
         return f.read().strip()
 
-
-access_token = contents_of(access_token_path)
+access_token = environ.get('LDBWS_ACCESS_TOKEN')
+# if access_token is None:
+#     access_token = contents_of(access_token_path)
 
 
 @app.errorhandler(500)
