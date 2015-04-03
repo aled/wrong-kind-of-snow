@@ -12,8 +12,8 @@ import logging
 
 app = Flask(__name__)
 
-logging.basicConfig(level=logging.INFO)
-logging.getLogger('suds.client').setLevel(logging.DEBUG)
+logging.basicConfig(filename='log.txt', level=logging.INFO)
+#logging.getLogger('suds.client').setLevel(logging.DEBUG)
 
 access_token_path = join(expanduser("~"), '.ldbws-access-token')
 
@@ -23,8 +23,8 @@ def contents_of(path):
         return f.read().strip()
 
 access_token = environ.get('LDBWS_ACCESS_TOKEN')
-# if access_token is None:
-#     access_token = contents_of(access_token_path)
+if access_token is None:
+    access_token = contents_of(access_token_path)
 
 
 @app.errorhandler(500)
@@ -172,6 +172,28 @@ def get_departure_board_from(from_crs):
 def get_departure_board_from_to(from_crs, to_crs):
     try:
         soap_response = get_service().GetDepartureBoard(numRows=50, crs=from_crs, filterCrs=to_crs, filterType='to')
+        resp = station_board(soap_response)
+        return jsonify(resp)
+    except Exception as e:
+        logging.error(e.message)
+        abort(500)
+
+
+@app.route('/ldbws-rest-proxy/v0.1/arrival-board/<string:to_crs>', methods=['GET'])
+def get_arrival_board_to(to_crs):
+    try:
+        soap_response = get_service().GetArrivalBoard(numRows=50, crs=to_crs)
+        resp = station_board(soap_response)
+        return jsonify(resp)
+    except Exception as e:
+        logging.error(e.message)
+        abort(500)
+
+
+@app.route('/ldbws-rest-proxy/v0.1/arrival-board/<string:to_crs>/<string:from_crs>', methods=['GET'])
+def get_arrival_board_to_from(to_crs, from_crs):
+    try:
+        soap_response = get_service().GetArrivalBoard(numRows=50, crs=to_crs, filterCrs=from_crs, filterType='from')
         resp = station_board(soap_response)
         return jsonify(resp)
     except Exception as e:
