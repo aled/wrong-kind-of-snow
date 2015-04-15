@@ -1,7 +1,7 @@
 # Proxy server to hide the horribleness of SOAP from clients.
 # Presents a REST interface to clients
 
-# Currently only implements GetDepartureBoard() as a proof of concept.
+# Currently implements GetDepartureBoard(), getArrivalBoard() and GetServiceDetails()
 
 from suds.client import Client
 from suds.sax.element import Element
@@ -12,7 +12,7 @@ import logging
 
 app = Flask(__name__)
 
-logging.basicConfig(filename='log.txt', level=logging.INFO)
+logging.basicConfig(filename='ldbws-rest-proxy.log', level=logging.INFO)
 #logging.getLogger('suds.client').setLevel(logging.DEBUG)
 
 access_token_path = join(expanduser("~"), '.ldbws-access-token')
@@ -28,7 +28,7 @@ if access_token is None:
 
 
 @app.errorhandler(500)
-def not_found(error):
+def internal_error(error):
     return make_response(jsonify({'error': 'Internal error'}), 500)
 
 
@@ -46,6 +46,13 @@ def extract_fields(source, *data):
     return r
 
 
+def extract_list(x, field, parser):
+    if field in x:
+        return [parser(i) for i in x[field]]
+    else:
+        return []
+
+
 def service_location(x):
     return extract_fields(x,
                           ('futureChangeTo', string),
@@ -56,11 +63,11 @@ def service_location(x):
 
 
 def service_locations(x):
-    return [service_location(i) for i in x.location]
+    return extract_list(x, 'location', service_location)
 
 
 def adhoc_alerts(x):
-    return [i for i in x.adhocAlertText]
+    return extract_list(x, 'adhocAlertText', string)
 
 
 def service_item(x):
@@ -80,11 +87,11 @@ def service_item(x):
 
 
 def service_items(x):
-    return [service_item(i) for i in x.service]
+    return extract_list(x, 'service', service_item)
 
 
 def nrcc_messages(x):
-    return [i for i in x.message]
+    return extract_list(x, 'message', string)
 
 
 def station_board(x):
@@ -114,11 +121,11 @@ def calling_points(x):
 
 
 def calling_points_list(x):
-    return [calling_points(i) for i in x.callingPoint]
+    return extract_list(x, 'callingPoint', calling_points)
 
 
 def calling_points_list_list(x):
-    return [calling_points_list(i) for i in x.callingPointList]
+    return extract_list(x, 'callingPointList', calling_points_list)
 
 
 def service_details(x):
