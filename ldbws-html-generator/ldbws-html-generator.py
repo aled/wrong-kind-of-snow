@@ -80,12 +80,12 @@ def generateHtml(j):
 
 @app.route('/d/<string:from_crs>', methods=['GET'])
 def get_departure_board_from(from_crs):
-    return generateHtml(get_json(departure_board_url + '/' + from_crs))
+    return generateHtml(get_json(departure_board_url + '/' + string.upper(from_crs)))
 
 
 @app.route('/d/<string:from_crs>/<string:to_crs>', methods=['GET'])
 def get_departure_board_from_to(from_crs, to_crs):
-    return generateHtml(get_json(departure_board_url + '/' + from_crs + '/' + to_crs))
+    return generateHtml(get_json(departure_board_url + '/' + string.upper(from_crs) + '/' + string.upper(to_crs)))
 
 
 if __name__ == '__main__':
