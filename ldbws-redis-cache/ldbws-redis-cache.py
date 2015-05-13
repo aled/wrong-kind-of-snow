@@ -34,7 +34,7 @@ if redis_host is None:
 
 
 def get_valid_crs_codes():
-    with open('station_codes.csv', 'rb') as station_codes:
+    with open('../res/station_codes.csv', 'rb') as station_codes:
         return [row['Code'] for row in csv.DictReader(station_codes)]
 
 
