@@ -58,8 +58,8 @@ def get_cached(request):
             if response.status_code == 200:
                 logging.debug('Caching result for path: ' + request.path)
                 j = response.content
-                r.setex(name=request.path, value=j, time=300)  # expire in 5 minutes (300 seconds)
-                return Response(j, mimetype='text/json')
+                r.setex(name=request.path, value=j, time=60)  # expire in 1 minute (60 seconds)
+                return Response(j, mimetype='application/json')
 
         abort(500)
     except Exception as e:
