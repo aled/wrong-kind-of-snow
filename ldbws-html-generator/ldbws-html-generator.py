@@ -39,8 +39,8 @@ def get_valid_crs_codes():
 valid_crs_codes = get_valid_crs_codes()
 base_url = 'http://' + ldbws_rest_host + '/ldbws-rest-proxy/v0.1'
 departure_board_url = base_url + '/departure-board'
-css = "<style>\
-table{border-collapse:collapse;}\
+
+css = "table{border-collapse:collapse;}\
 td,th{padding:0.5em;}\
 table,th,td{\
 width:100%;\
@@ -53,7 +53,7 @@ border-spacing:5px;\
 width:auto;\
 }\
 body{font-family:Tahoma,Geneva,sans-serif;font-size:125%}\
-</style>"
+"
 
 def get_json(url):
     logging.debug('Querying REST service for path: ' + request.path)
@@ -73,7 +73,8 @@ def generateHtml(j):
     doc.asis('<!DOCTYPE html>')
     with tag('html'):
         with tag('head'):
-            doc.asis(css)
+            with tag('style'):
+                doc.asis(css)
         with tag('body'):
             with tag('h1'):
                 text('Live UK Train Departure Boards')
@@ -95,18 +96,23 @@ def generateHtml(j):
                 with tag('th'):
                     text('Platform')
 
-                for s in j.get('trainServices'):
+                if 'trainServices' not in j:
                     with tag('tr'):
-                        with tag('td'):
-                            text(s.get('operator'))
-                        with tag('td'):
-                            text(s.get('std'))
-                        with tag('td'):
-                            text(s.get('etd'))
-                        with tag('td'):
-                            text(extract_locations(s.get('destination')))
-                        with tag('td'):
-                            text(s.get('platform', '-'))
+                        with tag('td', colspan='5'):
+                            text('No departures in the next 2 hours')
+                else:
+                    for s in j.get('trainServices'):
+                        with tag('tr'):
+                            with tag('td'):
+                                text(s.get('operator'))
+                            with tag('td'):
+                                text(s.get('std'))
+                            with tag('td'):
+                                text(s.get('etd'))
+                            with tag('td'):
+                                text(extract_locations(s.get('destination')))
+                            with tag('td'):
+                                text(s.get('platform', '-'))
 
     return Response(doc.getvalue(), content_type='text/html')
 
@@ -117,7 +123,8 @@ def homepage():
     doc.asis('<!DOCTYPE html>')
     with tag('html'):
         with tag('head'):
-            doc.asis(css)
+            with tag('style'):
+                doc.asis(css)
         with tag('body'):
             with tag('h1'):
                 text('Live UK Train Departure Boards')
