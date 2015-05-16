@@ -36,6 +36,10 @@ def string(x):
     return x
 
 
+def datetime(x):
+    return x.isoformat()
+
+
 def extract_fields(source, *data):
     r = {}
     for o in data:
@@ -96,7 +100,7 @@ def nrcc_messages(x):
 
 def station_board(x):
     return extract_fields(x,
-                          ('generatedAt', string),
+                          ('generatedAt', datetime),
                           ('locationName', string),
                           ('crs', string),
                           ('filterLocationName', string),
@@ -130,7 +134,7 @@ def calling_points_list_list(x):
 
 def service_details(x):
     return extract_fields(x,
-                          ('generatedAt', string),
+                          ('generatedAt', datetime),
                           ('serviceType', string),
                           ('locationName', string),
                           ('crs', string),

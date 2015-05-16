@@ -5,6 +5,8 @@ import logging
 import string
 import requests
 from yattag import Doc
+from dateutil.parser import parse
+from pytz import timezone
 
 app = Flask(__name__)
 
@@ -68,6 +70,10 @@ def extract_locations(locations):
     return string.join([l.get('locationName') for l in locations], ', ')
 
 
+def format_date(datetime):
+    return parse(datetime).astimezone(timezone('Europe/London')).strftime('%Y-%m-%d %H:%M:%S %Z')
+
+
 def generateHtml(j):
     doc, tag, text = Doc().tagtext()
     doc.asis('<!DOCTYPE html>')
@@ -83,7 +89,7 @@ def generateHtml(j):
                 if 'filterLocationName' in j:
                     text(' to ' + j.get('filterLocationName'))
 
-            text('Last Updated: ' + j.get('generatedAt'))
+            text('Last Updated: ' + format_date(j.get('generatedAt')))
             with tag('table'):
                 with tag('th'):
                     text('Operator')
