@@ -113,8 +113,12 @@ def generateHtml(j):
                                 text(s.get('operator'))
                             with tag('td'):
                                 text(s.get('std'))
-                            with tag('td'):
-                                text(s.get('etd'))
+                            if s.get('etd') == 'On time':
+                                with tag('td'):
+                                    text(s.get('etd'))
+                            else:
+                                with tag('td', style='background-color:#ffcccc'):
+                                    text(s.get('etd'))
                             with tag('td'):
                                 text(extract_locations(s.get('destination')))
                             with tag('td'):
